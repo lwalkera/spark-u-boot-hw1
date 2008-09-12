@@ -1,0 +1,103 @@
+/*
+ *  linux/include/asm-arm/arch-pxa/adsvix.h
+ *
+ *  Author:	Jeff Lackey
+ *  Created:	April 20, 2005
+ *  Copyright:	Applied Data Systems, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Updated for u-boot by Robert Whaley 4/20/2005
+ *
+ */
+
+#ifndef ASM_ARCH_ADSBITSYXB_H
+#define ASM_ARCH_ADSBITSYXB_H
+
+// PXA27x MMC
+#define	ADSBITSYXB_MMC_DET	116	// /MMCCD
+
+// PXA27x USB Device Controller
+#define	ADSBITSYXB_UDC_DET	9	// J7-3 is /EXT_IRQ2
+#define	ADSBITSYXB_UDC_PRES	27	// USB_RECONN output
+
+// PXA27x AVR
+#define	ADSBITSYXB_AVR_GPIO	102	// IRQ_SSP
+
+// PXA27x Touch Screen
+#define	ADSBITSYXB_TS_PEN	22	// TS_IRQ
+
+// CPLD registers
+#define ADSBITSYXB_CPLD_BASE	PXA_CS2_PHYS
+
+#define _ADSBITSYXB_CPLD_REV	(ADSBITSYXB_CPLD_BASE + 0x00)
+#define _ADSBITSYXB_CPLD_CR0	(ADSBITSYXB_CPLD_BASE + 0x10)
+#define _ADSBITSYXB_CPLD_CR1	(ADSBITSYXB_CPLD_BASE + 0x14)
+#define _ADSBITSYXB_CPLD_CR2	(ADSBITSYXB_CPLD_BASE + 0x18)
+#define _ADSBITSYXB_PCMCIA_CR	(ADSBITSYXB_CPLD_BASE + 0x30)
+#define _ADSBITSYXB_PCMCIA_SR	(ADSBITSYXB_CPLD_BASE + 0x34)
+#define _ADSBITSYXB_PCMCIA_IER	(ADSBITSYXB_CPLD_BASE + 0x38)
+#define _ADSBITSYXB_PCMCIA_IFR	(ADSBITSYXB_CPLD_BASE + 0x3c)
+
+#ifndef __ASSEMBLY__
+#define ADSBITSYXB_CPLD_REV	(*((volatile u_char *)(_ADSBITSYXB_CPLD_REV)))
+#define ADSBITSYXB_CPLD_CR0	(*((volatile u_char *)(_ADSBITSYXB_CPLD_CR0)))
+#define ADSBITSYXB_CPLD_CR1	(*((volatile u_char *)(_ADSBITSYXB_CPLD_CR1)))
+#define ADSBITSYXB_CPLD_CR2	(*((volatile u_char *)(_ADSBITSYXB_CPLD_CR2)))
+#define ADSBITSYXB_PCMCIA_CR	(*((volatile u_char *)(_ADSBITSYXB_PCMCIA_CR)))
+#define ADSBITSYXB_PCMCIA_SR	(*((volatile u_char *)(_ADSBITSYXB_PCMCIA_SR)))
+#define ADSBITSYXB_PCMCIA_IER	(*((volatile u_char *)(_ADSBITSYXB_PCMCIA_IER)))
+#define ADSBITSYXB_PCMCIA_IFR	(*((volatile u_char *)(_ADSBITSYXB_PCMCIA_IFR)))
+#endif
+
+#define ADSBITSYXB_CPLD_REV_MASK	0xF0
+
+#define ADSBITSYXB_CR0_AMP		0x01
+#define ADSBITSYXB_CR0_CODEC		0x02
+#define ADSBITSYXB_CR0_COM1_3		0x04
+#define ADSBITSYXB_CR0_LDO		0x08
+#define ADSBITSYXB_CR0_IRDA		0x20
+#define ADSBITSYXB_CR0_CB_PE1		0x40
+#define ADSBITSYXB_CR0_CB_PE2		0x80
+
+#define ADSBITSYXB_CR1_PANEL		0x01
+#define ADSBITSYXB_CR1_VEE		0x02
+#define ADSBITSYXB_CR1_TS_SPI_SEL	0x10
+#define ADSBITSYXB_CR1_CB_SPI_SEL	0x20
+
+#define ADSBITSYXB_CR2_LED0		0x01
+#define ADSBITSYXB_CR2_RESETAVR		0x02
+#define ADSBITSYXB_CR2_WAKE_AVR		0x04
+#define ADSBITSYXB_CR2_SPARE0		0x10	// SD socket power
+#define ADSBITSYXB_CR2_WAKE_ON_KP	0x40
+
+#define ADSBITSYXB_CR_CARDB_3V		0x01
+#define ADSBITSYXB_CR_CARDB_5V		0x02
+#define ADSBITSYXB_CR_CARDA_3V		0x04
+#define ADSBITSYXB_CR_CARDA_5V		0x08
+#define ADSBITSYXB_CR_CARDB_RES		0x10
+#define ADSBITSYXB_CR_CARDA_RES		0x20
+
+#define ADSBITSYXB_SR_CARDB_RDY		0x01
+#define ADSBITSYXB_SR_CARDA_RDY		0x02
+#define ADSBITSYXB_SR_CARDB_PRS		0x04
+#define ADSBITSYXB_SR_CARDA_PRS		0x08
+#define ADSBITSYXB_SR_CARDB_VS1		0x10
+#define ADSBITSYXB_SR_CARDB_VS2		0x20
+#define ADSBITSYXB_SR_CARDA_VS1		0x40
+#define ADSBITSYXB_SR_CARDA_VS2		0x80
+
+#define ADSBITSYXB_SR_ETH_MASK		0x34
+#define ADSBITSYXB_SR_ETH_PRS		0x04
+
+#define ADSBITSYXB_INT_CARDB_DET	0x10
+#define ADSBITSYXB_INT_CARDA_DET	0x20
+#define ADSBITSYXB_INT_CARDB_IRQ	0x40
+#define ADSBITSYXB_INT_CARDA_IRQ	0x80
+
+#define ADSBITSYXB_INT_CARD_MASK	0xf0
+
+#endif
+

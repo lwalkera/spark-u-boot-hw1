@@ -1,0 +1,29 @@
+
+#include <common.h>
+#include <asm/arch/pxa-regs.h>
+#include "adsvgx.h"
+
+void pcmcia_power_on(void)
+{
+	if (!(ADSVGX_CPLD_PCMCIA_SR & ADSVGX_CPLD_PCMCIA_STA_A_VS1)) /* 3.3V */ {
+		ADSVGX_CPLD_PCMCIA_CR &= ~ADSVGX_CPLD_PCMCIA_CR_A_5V;
+		ADSVGX_CPLD_PCMCIA_CR |= ADSVGX_CPLD_PCMCIA_CR_A_3V;
+	}
+	else /* 5.0V */ {
+		ADSVGX_CPLD_PCMCIA_CR &= ~ADSVGX_CPLD_PCMCIA_CR_A_3V;
+		ADSVGX_CPLD_PCMCIA_CR |= ADSVGX_CPLD_PCMCIA_CR_A_5V;
+	}
+
+	ADSVGX_CPLD_PCMCIA_CR |= ADSVGX_CPLD_PCMCIA_CR_A_RS;
+
+	udelay(300000);
+
+	ADSVGX_CPLD_PCMCIA_CR &= ~ADSVGX_CPLD_PCMCIA_CR_A_RS;
+
+	udelay(200000);
+}
+
+void pcmcia_power_off(void)
+{
+	ADSVGX_CPLD_PCMCIA_CR &= ~(ADSVGX_CPLD_PCMCIA_CR_A_5V | ADSVGX_CPLD_PCMCIA_CR_A_3V);
+}
