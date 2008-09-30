@@ -35,64 +35,8 @@
 #endif
 
 static int bmp_info (ulong addr);
-static int bmp_display (ulong addr, int x, int y);
-
-int gunzip(void *, int, unsigned char *, unsigned long *);
-
-/*
- * Allocate and decompress a BMP image using gunzip().
- *
- * Returns a pointer to the decompressed image data. Must be freed by
- * the caller after use.
- *
- * Returns NULL if decompression failed, or if the decompressed data
- * didn't contain a valid BMP signature.
- */
-#ifdef CONFIG_VIDEO_BMP_GZIP
-static bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp)
-{
-	void *dst;
-	unsigned long len;
-	bmp_image_t *bmp;
-
-	/*
-	 * Decompress bmp image
-	 */
-	len = CFG_VIDEO_LOGO_MAX_SIZE;
-	dst = malloc(CFG_VIDEO_LOGO_MAX_SIZE);
-	if (dst == NULL) {
-		puts("Error: malloc in gunzip failed!\n");
-		return NULL;
-	}
-	if (gunzip(dst, CFG_VIDEO_LOGO_MAX_SIZE, (uchar *)addr, &len) != 0) {
-		free(dst);
-		return NULL;
-	}
-	if (len == CFG_VIDEO_LOGO_MAX_SIZE)
-		puts("Image could be truncated"
-				" (increase CFG_VIDEO_LOGO_MAX_SIZE)!\n");
-
-	bmp = dst;
-
-	/*
-	 * Check for bmp mark 'BM'
-	 */
-	if (!((bmp->header.signature[0] == 'B') &&
-	      (bmp->header.signature[1] == 'M'))) {
-		free(dst);
-		return NULL;
-	}
-
-	puts("Gzipped BMP image detected!\n");
-
-	return bmp;
-}
-#else
-static bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp)
-{
-	return NULL;
-}
-#endif
+extern int bmp_display (ulong addr, int x, int y);
+extern bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp);
 
 
 /*
@@ -192,45 +136,4 @@ static int bmp_info(ulong addr)
 	return(0);
 }
 
-/*
- * Subroutine:  bmp_display
- *
- * Description: Display bmp file located in memory
- *
- * Inputs:	addr		address of the bmp file
- *
- * Return:      None
- *
- */
-static int bmp_display(ulong addr, int x, int y)
-{
-	int ret;
-	bmp_image_t *bmp = (bmp_image_t *)addr;
-	unsigned long len;
 
-	if (!((bmp->header.signature[0]=='B') &&
-	      (bmp->header.signature[1]=='M')))
-		bmp = gunzip_bmp(addr, &len);
-
-	if (!bmp) {
-		printf("There is no valid bmp file at the given address\n");
-		return 1;
-	}
-
-#if defined(CONFIG_LCD)
-	extern int lcd_display_bitmap (ulong, int, int);
-
-	ret = lcd_display_bitmap ((unsigned long)bmp, x, y);
-#elif defined(CONFIG_VIDEO)
-	extern int video_display_bitmap (ulong, int, int);
-
-	ret = video_display_bitmap ((unsigned long)bmp, x, y);
-#else
-# error bmp_display() requires CONFIG_LCD or CONFIG_VIDEO
-#endif
-
-	if ((unsigned long)bmp != addr)
-		free(bmp);
-
-	return ret;
-}

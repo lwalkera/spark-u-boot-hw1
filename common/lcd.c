@@ -27,8 +27,6 @@
 /* ** HEADER FILES							*/
 /************************************************************************/
 
-#define DEBUG
-
 #include <config.h>
 #include <common.h>
 #include <command.h>
@@ -36,6 +34,7 @@
 #include <stdarg.h>
 #include <linux/types.h>
 #include <devices.h>
+#include <malloc.h>
 #if defined(CONFIG_POST)
 #include <post.h>
 #endif
@@ -104,6 +103,8 @@ static void lcd_getcolreg (ushort regno,
 static int lcd_getfgcolor (void);
 #endif	/* NOT_USED_SO_FAR */
 
+extern bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp);
+extern int bmp_display(ulong addr, int x, int y);
 /************************************************************************/
 
 /*----------------------------------------------------------------------*/
@@ -237,7 +238,7 @@ static void lcd_drawchars (ushort x, ushort y, uchar *str, int count)
 	for (row=0;  row < VIDEO_FONT_HEIGHT;  ++row, dest += lcd_line_length)  {
 		uchar *s = str;
 #if LCD_BPP == LCD_COLOR16
-		ushort *d = dest;
+		ushort *d = (ushort *)dest;
 #else
 		uchar *d = dest;
 #endif
@@ -380,15 +381,15 @@ static int lcd_clear (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
 
 #elif LCD_BPP == LCD_COLOR8
 	/* Setting the palette */
-	lcd_setcolreg  (CONSOLE_COLOR_BLACK,       0,    0,    0);
-	lcd_setcolreg  (CONSOLE_COLOR_RED,	0xFF,    0,    0);
-	lcd_setcolreg  (CONSOLE_COLOR_GREEN,       0, 0xFF,    0);
-	lcd_setcolreg  (CONSOLE_COLOR_YELLOW,	0xFF, 0xFF,    0);
-	lcd_setcolreg  (CONSOLE_COLOR_BLUE,        0,    0, 0xFF);
-	lcd_setcolreg  (CONSOLE_COLOR_MAGENTA,	0xFF,    0, 0xFF);
-	lcd_setcolreg  (CONSOLE_COLOR_CYAN,	   0, 0xFF, 0xFF);
-	lcd_setcolreg  (CONSOLE_COLOR_GREY,	0xAA, 0xAA, 0xAA);
-	lcd_setcolreg  (CONSOLE_COLOR_WHITE,	0xFF, 0xFF, 0xFF);
+	lcd_setcolreg  (CONSOLE_COLOR_BLACK,      0,    0,    0);
+	lcd_setcolreg  (CONSOLE_COLOR_RED,     0xFF,    0,    0);
+	lcd_setcolreg  (CONSOLE_COLOR_GREEN,      0, 0xFF,    0);
+	lcd_setcolreg  (CONSOLE_COLOR_YELLOW,  0xFF, 0xFF,    0);
+	lcd_setcolreg  (CONSOLE_COLOR_BLUE,       0,    0, 0xFF);
+	lcd_setcolreg  (CONSOLE_COLOR_MAGENTA, 0xFF,    0, 0xFF);
+	lcd_setcolreg  (CONSOLE_COLOR_CYAN,	      0, 0xFF, 0xFF);
+	lcd_setcolreg  (CONSOLE_COLOR_GREY,	   0xAA, 0xAA, 0xAA);
+	lcd_setcolreg  (CONSOLE_COLOR_WHITE,   0xFF, 0xFF, 0xFF);
 #endif
 
 #ifndef CFG_WHITE_ON_BLACK
@@ -599,8 +600,8 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 #endif
 	ushort i, j;
 	uchar *fb;
-	bmp_image_t *bmp=(bmp_image_t *)bmp_image;
 	uchar *bmap;
+	bmp_image_t *bmp=(bmp_image_t *)bmp_image;
 	ushort padded_line;
 	unsigned long width, height;
 	unsigned long pwidth = panel_info.vl_col;
@@ -617,7 +618,7 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 		(bmp->header.signature[1]=='M'))) {
 		printf ("Error: no valid bmp image at %lx\n", bmp_image);
 		return 1;
-}
+	}
 
 	width = le32_to_cpu (bmp->header.width);
 	height = le32_to_cpu (bmp->header.height);
@@ -645,13 +646,13 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 #if !defined(CONFIG_MCC200)
 	/* MCC200 LCD doesn't need CMAP, supports 1bpp b&w only */
 	if (bpix==8) {
-#if defined(CONFIG_PXA250) || defined(CONFIG_PXA27X)
+	#if defined(CONFIG_PXA250) || defined(CONFIG_PXA27X)
 		cmap = (ushort *)fbi->palette;
-#elif defined(CONFIG_MPC823)
+	#elif defined(CONFIG_MPC823)
 		cmap = (ushort *)&(cp->lcd_cmap[255*sizeof(ushort)]);
-#else
-# error "Don't know location of color map"
-#endif
+	#else
+	# error "Don't know location of color map"
+	#endif
 
 		/* Set color map */
 		for (i=0; i<colors; ++i) {
@@ -660,19 +661,19 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 				( ((cte.red)   << 8) & 0xf800) |
 				( ((cte.green) << 3) & 0x07e0) |
 				( ((cte.blue)  >> 3) & 0x001f) ;
-#ifdef CFG_INVERT_COLORS
+	#ifdef CFG_INVERT_COLORS
 			*cmap = 0xffff - colreg;
-#else
+	#else
 			*cmap = colreg;
-#endif
-#if defined(CONFIG_PXA250) || defined(CONFIG_PXA27X)
+	#endif
+	#if defined(CONFIG_PXA250) || defined(CONFIG_PXA27X)
 			cmap++;
-#elif defined(CONFIG_MPC823)
+	#elif defined(CONFIG_MPC823)
 			cmap--;
-#endif
+	#endif
 		}
 	} //if(bpix==8)
-#endif
+#endif /* !defined(CONFIG_MCC200) */
 
 	/*
 	 *  BMP format for Monochrome assumes that the state of a
@@ -699,9 +700,15 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 	if ((y + height)>panel_info.vl_row)
 		height = panel_info.vl_row - y;
 
+	if(bpix==16)
+	{
+		x *= 2;
+		width *= 2;
+	}
+
 	bmap = (uchar *)bmp + le32_to_cpu (bmp->header.data_offset);
-	fb   = (uchar *) (lcd_base +
-		(y + height - 1) * lcd_line_length + x);
+	fb   = (uchar *) (lcd_base + (y + height - 1) * lcd_line_length + x);
+
 	for (i = 0; i < height; ++i) {
 		WATCHDOG_RESET();
 		for (j = 0; j < width ; j++)
@@ -710,7 +717,8 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 #elif defined(CONFIG_MPC823) || defined(CONFIG_MCC200)
 			*(fb++)=255-*(bmap++);
 #endif
-		bmap += (width - padded_line);
+		if(bpix==8)
+			bmap += (width - padded_line);
 		fb   -= (width + lcd_line_length);
 	}
 
@@ -718,6 +726,107 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 }
 #endif
 
+int gunzip(void *, int, unsigned char *, unsigned long *);
+
+/*
+ * Allocate and decompress a BMP image using gunzip().
+ *
+ * Returns a pointer to the decompressed image data. Must be freed by
+ * the caller after use.
+ *
+ * Returns NULL if decompression failed, or if the decompressed data
+ * didn't contain a valid BMP signature.
+ */
+#ifdef CONFIG_VIDEO_BMP_GZIP
+bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp)
+{
+	void *dst;
+	unsigned long len;
+	bmp_image_t *bmp;
+
+	/*
+	 * Decompress bmp image
+	 */
+	len = CFG_VIDEO_LOGO_MAX_SIZE;
+	dst = malloc(CFG_VIDEO_LOGO_MAX_SIZE);
+	if (dst == NULL) {
+		puts("Error: malloc in gunzip failed!\n");
+		return NULL;
+	}
+	if (gunzip(dst, CFG_VIDEO_LOGO_MAX_SIZE, (uchar *)addr, &len) != 0) {
+		free(dst);
+		return NULL;
+	}
+	if (len == CFG_VIDEO_LOGO_MAX_SIZE)
+		puts("Image could be truncated"
+				" (increase CFG_VIDEO_LOGO_MAX_SIZE)!\n");
+
+	bmp = dst;
+
+	/*
+	 * Check for bmp mark 'BM'
+	 */
+	if (!((bmp->header.signature[0] == 'B') &&
+	      (bmp->header.signature[1] == 'M'))) {
+		free(dst);
+		return NULL;
+	}
+
+	puts("Gzipped BMP image detected!\n");
+
+	return bmp;
+}
+#else
+static bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp)
+{
+	return NULL;
+}
+#endif
+
+/*
+ * Subroutine:  bmp_display
+ *
+ * Description: Display bmp file located in memory
+ *
+ * Inputs:	addr		address of the bmp file
+ *
+ * Return:      None
+ *
+ */
+#if defined(CONFIG_CMD_BMP)
+int bmp_display(ulong addr, int x, int y)
+{
+	int ret;
+	bmp_image_t *bmp = (bmp_image_t *)addr;
+	unsigned long len;
+
+	if (!((bmp->header.signature[0]=='B') &&
+	      (bmp->header.signature[1]=='M')))
+		bmp = gunzip_bmp(addr, &len);
+
+	if (!bmp) {
+		printf("There is no valid bmp file at the given address\n");
+		return 1;
+	}
+
+#if defined(CONFIG_LCD)
+	extern int lcd_display_bitmap (ulong, int, int);
+
+	ret = lcd_display_bitmap ((unsigned long)bmp, x, y);
+#elif defined(CONFIG_VIDEO)
+	extern int video_display_bitmap (ulong, int, int);
+
+	ret = video_display_bitmap ((unsigned long)bmp, x, y);
+#else
+# error bmp_display() requires CONFIG_LCD or CONFIG_VIDEO
+#endif
+
+	if ((unsigned long)bmp != addr)
+		free(bmp);
+
+	return ret;
+}
+#endif
 
 static void *lcd_logo (void)
 {
@@ -735,7 +844,7 @@ static void *lcd_logo (void)
 		addr = simple_strtoul(s, NULL, 16);
 		do_splash = 0;
 
-		if (lcd_display_bitmap (addr, 0, 0) == 0) {
+		if (bmp_display(addr, 0, 0) == 0) {
 			return ((void *)lcd_base);
 		}
 	}

@@ -73,6 +73,7 @@
 #define CONFIG_VIDEO_BMP_GZIP
 #define CONFIG_PXA_VGA
 #define LCD_BPP LCD_COLOR16
+#define CONFIG_SPLASH_SCREEN
 #define CFG_VIDEO_LOGO_MAX_SIZE 0xe3000
 
 #undef CONFIG_CMD_NET
@@ -101,6 +102,7 @@
 #define CONFIG_EXTRA_ENV_SETTINGS                                         \
    "board=cm-x270\0"                                                      \
    "FLBLOCKSZ=256k\0"                                                     \
+   "splashimage=0x80000\0"                                                \
    "tty_args=console=ttyS0,115200\0"                                      \
    "eraseenv="	                                                          \
      "protect off 0x00040000 0x0007ffff;"                                 \
@@ -124,7 +126,7 @@
    "boot_linux="                                                          \
      "echo Booting linux;"\
      "if test -n ${cf_ide_ok};"\
-     "then ext2load ide 0 zImage_buffer /zImage;"\
+     "then ext2load ide 0:2 zImage_buffer /zImage;"\
        "bootm zImage_buffer;"\
      "else echo Failed to load kernel;"\
 	 "fi\0"\
