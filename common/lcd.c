@@ -361,6 +361,7 @@ int drv_lcd_init (void)
 	/* Device initialization */
 	memset (&lcddev, 0, sizeof (lcddev));
 
+#if defined(CONFIG_USE_LCD_CONSOLE)
 	strcpy (lcddev.name, "lcd");
 	lcddev.ext   = 0;			/* No extensions */
 	lcddev.flags = DEV_FLAGS_OUTPUT;	/* Output only */
@@ -368,6 +369,7 @@ int drv_lcd_init (void)
 	lcddev.puts  = lcd_puts;		/* 'puts' function */
 
 	rc = device_register (&lcddev);
+#endif
 
 	return (rc == 0) ? 1 : rc;
 }

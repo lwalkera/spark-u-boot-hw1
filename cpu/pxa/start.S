@@ -264,23 +264,15 @@ setspeed_done:
 #endif /* CFG_CPUSPEED */
 #endif /* CONFIG_CPU_MONAHANS */
 
-	/*
-	 * before relocating, we have to setup RAM timing
-	 * because memory timing is board-dependend, you will
-	 * find a lowlevel_init.S in your board directory.
-	 */
-	mov	ip,	lr
-	bl	lowlevel_init
-	mov	lr,	ip
-
-	/* Memory interfaces are working. Disable MMU and enable I-cache.   */
-	/* mk: hmm, this is not in the monahans docs, leave it now but
-	 *     check here if it doesn't work :-) */
-
 	ldr	r0, =0x2001		/* enable access to all coproc.	    */
 	mcr	p15, 0, r0, c15, c1, 0
 	CPWAIT r0
 
+	mov r0, #0b01111000
+	mcr p15, 0, r0, c1,  c0, 0 /*Disable d-cache, align faults, and MMU */
+	CPWAIT r0
+
+	mov r0, #0
 	mcr	p15, 0, r0, c7, c10, 4	/* drain the write & fill buffers   */
 	CPWAIT r0
 
@@ -290,6 +282,21 @@ setspeed_done:
 	mcr	p15, 0, r0, c8, c7, 0	/* flush instuction and data TLBs   */
 	CPWAIT r0
 
+	/*
+	 * before relocating, we have to setup RAM timing
+	 * because memory timing is board-dependend, you will
+	 * find a lowlevel_init.S in your board directory.
+	 */
+
+	mov	ip,	lr
+	bl	lowlevel_init
+	mov	lr,	ip
+
+	/* Memory interfaces are working. Disable MMU and enable I-cache.   */
+	/* mk: hmm, this is not in the monahans docs, leave it now but
+	 *     check here if it doesn't work :-) */
+
+	
 	/* Enable the Icache						    */
 /*
 	mrc	p15, 0, r0, c1, c0, 0

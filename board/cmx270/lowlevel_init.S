@@ -45,14 +45,6 @@
 
 .globl lowlevel_init
 lowlevel_init:
-	/* Are we waking from sleep? */
-	ldr	r0,	=RCSR
-	ldr	r1,	[r0]
-	and	r1,	r1, #(RCSR_GPR | RCSR_SMR | RCSR_WDR | RCSR_HWR)
-	teq	r1,	#RCSR_SMR
-
-	beq	skip_gpios
-	
 	/* Set up GPIO pins first ----------------------------------------- */
 
 	ldr		r0,	=GPSR0
@@ -369,16 +361,16 @@ mem_init:
 setvoltage:
 
 	mov	r10,	lr
-	bl	initPXAvoltage	/* In case the board is rebooting with a    */
-	mov	lr,	r10	/* low voltage raise it up to a good one.   */
+	bl	initPXAvoltage	/* In case the board is rebooting with a     */
+	mov	lr,	r10         /* low voltage, raise it up to a good one.   */
 #endif
 
 wakeup:
 	/* Are we waking from sleep? */
 	ldr	r0,	=RCSR
 	ldr	r1,	[r0]
-	and	r1,	r1, #(RCSR_GPR | RCSR_SMR | RCSR_WDR | RCSR_HWR)
-	/*str	r1,	[r0]*/
+	and	r1,	r1, #RCSR_SMR
+	str	r1,	[r0]
 	teq	r1,	#RCSR_SMR
 
 	bne	initirqs
@@ -392,18 +384,22 @@ wakeup:
 	ldr	r1,	[r0]
 	mov	pc,	r1
 
+
 	/* ---------------------------------------------------------------- */
 	/* Disable (mask) all interrupts at interrupt controller	    */
 	/* ---------------------------------------------------------------- */
 
 initirqs:
+	mov	r1, #0          /* clear int. level register (IRQ, not FIQ) */
+	ldr r2, =0x40D00000 /*interrput controler base addr */
+	str	r1, [r2, #0x08]    @ICLR
+	str r1, [r2, #0xA4]    @ICLR2
 
-	mov	r1,  #0		/* clear int. level register (IRQ, not FIQ) */
-	ldr	r2,  =ICLR
-	str	r1,  [r2]
+	/* mask all interrupts at the controller    */
+	str	r1, [r2, #0x04]    @ICMR
+	str r1, [r2, #0xA0]    @ICMR2 
 
-	ldr	r2,  =ICMR	/* mask all interrupts at the controller    */
-	str	r1,  [r2]
+	str r1, [r2, #0x14]    @ICCR
 
 	/* ---------------------------------------------------------------- */
 	/* Clock initialisation						    */
@@ -417,11 +413,6 @@ initclks:
 	/* for re-configuration.					    */
 	ldr	r1,  =CKEN
 	ldr	r2,  =CFG_CKEN
-	str	r2,  [r1]
-
-	/* ... and write the core clock config register			    */
-	ldr	r2,  =CFG_CCCR
-	ldr	r1,  =CCCR
 	str	r2,  [r1]
 
 	/* Turn on turbo mode */

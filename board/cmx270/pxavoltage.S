@@ -92,10 +92,38 @@ set_voltage:
 	str r1, [r0]
 	nop
 	nop
-	/*initiate voltage change*/
-	mov r0, #8
-	mcr p14, 0, r0,c7,c0
-	nop
-	nop
+	b EnterVoltageChange__asm
+
+@ Fix for E28: POWER MANAGER: Core hangs during voltage change when there are outstanding transactions on the bus
+.global EnterVoltageChange__asm
+@ align code to fit in one page
+.align 7 
+EnterVoltageChange__asm:
+	ldr   r0, =0x41300000       @ APB register read and compare
+	ldr   r0, [r0]              @ fence for pending slow apb reads
+	cmp   r0, #0
+
+	mov   r0, #8                @ VC bit for PWRMODE
+	movs  r1, #1                @ don't execute mcr on 1st pass
+	mov   r2, #0x0A000000       @ uncacheable memory to force memory read
+@ CHANGE THIS ADDRESS for your environment
+@ MUST be mapped into pagetable prior to
+@ this function call
+
+retry:
+	ldreq r3, [r2]              @ only stall on the 2nd pass
+	cmpeq r3, #0                @ compare causes fence on memory transfers
+	cmp   r1, #0                @ is this the 2nd pass?
+	mcreq p14, 0, r0, c7, c0, 0 @ write to PWRMODE on 2nd pass only
+
+@ Read the VC bit until it is 0, indicates that the VoltageChange is done.
+@ On the first pass, we never set the VC bit, so it will be clear already.
+VoltageChange_loop:
+	mrc    p14, 0, r3, c7, c0, 0
+	tst    r3, #0x8
+	bne    VoltageChange_loop
+
+	subs   r1, r1, #1           @ update conditional execution counter
+	beq    retry
 
 	mov pc, r4

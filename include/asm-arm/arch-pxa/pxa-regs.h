@@ -1906,6 +1906,7 @@ typedef void		(*ExcpHndlr) (void) ;
 #define FSADR1		__REG(0x44000214)  /* DMA Channel 1 Frame Source Address Register */
 #define FIDR1		__REG(0x44000218)  /* DMA Channel 1 Frame ID Register */
 #define LDCMD1		__REG(0x4400021C)  /* DMA Channel 1 Command Register */
+#define LCDBSCNTR	__REG(0x48000054)  /* LCD Buffer Strength Control */
 
 #define LCCR0_ENB	(1 << 0)	/* LCD Controller enable */
 #define LCCR0_CMS	(1 << 1)	/* Color = 0, Monochrome = 1 */

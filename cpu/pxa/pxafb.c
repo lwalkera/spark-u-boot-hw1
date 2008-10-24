@@ -26,7 +26,6 @@
 /************************************************************************/
 /* ** HEADER FILES							*/
 /************************************************************************/
-#define DEBUG 
 
 #include <config.h>
 #include <common.h>
@@ -55,7 +54,7 @@
 #if LCD_BPP==LCD_COLOR8
 # define REG_LCCR3	0x0300FF01
 #elif LCD_BPP==LCD_COLOR16
-# define REG_LCCR3	0x0400FF01
+# define REG_LCCR3	0x0440FF00
 #else
 #error Must define LCD bit depth!
 #endif
@@ -361,6 +360,7 @@ static void pxafb_enable_controller (vidinfo_t *vid)
 	debug("Enabling LCD controller\n");
 
 	/* Sequence from 11.7.10 */
+	LCDBSCNTR = CFG_LCDBSCNTR_VAL;
 	LCCR3  = vid->pxa.reg_lccr3;
 	LCCR2  = vid->pxa.reg_lccr2;
 	LCCR1  = vid->pxa.reg_lccr1;

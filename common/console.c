@@ -490,7 +490,7 @@ int console_init_r (void)
 	device_t *inputdev = NULL, *outputdev = NULL;
 	int i, items = ListNumItems (devlist);
 
-#ifdef CONFIG_SPLASH_SCREEN
+#if defined(CONFIG_USE_LCD_CONSOLE) && defined(CONFIG_SPLASH_SCREEN)
 	/* suppress all output if splash screen is enabled and we have
 	   a bmp to display                                            */
 	if (getenv("splashimage") != NULL)
