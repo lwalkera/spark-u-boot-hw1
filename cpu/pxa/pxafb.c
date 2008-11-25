@@ -54,7 +54,7 @@
 #if LCD_BPP==LCD_COLOR8
 # define REG_LCCR3	0x0300FF01
 #elif LCD_BPP==LCD_COLOR16
-# define REG_LCCR3	0x0440FF00
+# define REG_LCCR3	0x0440FF01
 #else
 #error Must define LCD bit depth!
 #endif
@@ -75,12 +75,12 @@ vidinfo_t panel_info = {
 	vl_splt:	0,
 	vl_clor:	0,
 	vl_tft:		1,
-	vl_hpw:		40,
-	vl_blw:		56,
-	vl_elw:		56,
-	vl_vpw:		20,
-	vl_bfw:		8,
-	vl_efw:		8,
+	vl_hpw:		63,
+	vl_blw:		0x51,
+	vl_elw:		0x10,
+	vl_vpw:		2,
+	vl_bfw:		0x21,
+	vl_efw:		0x0a,
 };
 #endif /* CONFIG_PXA_VIDEO */
 
