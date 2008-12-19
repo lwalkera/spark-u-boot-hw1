@@ -249,14 +249,20 @@ Done:
 
 int  env_init(void)
 {
+	gd->env_addr  = (ulong)&default_environment[0];
+	gd->env_valid = 0;
+#if CONFIG_CMX270
+	//Check for environment reset, GPIO106 high
+	if(GPLR3 & 0x00000400)
+		return (0);
+#endif
+
 	if (crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
 		gd->env_addr  = (ulong)&(env_ptr->data);
 		gd->env_valid = 1;
 		return(0);
 	}
 
-	gd->env_addr  = (ulong)&default_environment[0];
-	gd->env_valid = 0;
 	return (0);
 }
 
