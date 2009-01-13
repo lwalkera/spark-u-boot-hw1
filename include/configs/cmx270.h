@@ -88,14 +88,14 @@
 #define CONFIG_RESET_TO_RETRY
 
 #define CONFIG_SILENT_CONSOLE
-#define CONFIG_BOOTDELAY	5
+#define CONFIG_BOOTDELAY	0
 
 #define CONFIG_BOOTCOMMAND	"run start"
 #define CONFIG_BOOTARGS		"console=ttyS0,115200"\
-				" rw root=/dev/hda1 rootdelay=5s "   \
+				" ro root=/dev/hda1 rootdelay=5s "   \
 				" " CONFIG_MTD_PARTS
 
-#define CONFIG_MTD_PARTS	"mtdparts=flash0"			\
+#define CONFIG_MTD_PARTS	"mtdparts=physmap-flash.0"			\
 				":256k(boot)"				\
 				",256k(bootvars)"			\
 				",512k(bootlogo)"
