@@ -82,6 +82,18 @@ typedef struct {
 #define FLASH_CFI_X8X16		0x02
 #define FLASH_CFI_X16X32	0x05
 
+/*
+ * Command sets
+ */
+#define CFI_CMDSET_NONE			0
+#define CFI_CMDSET_INTEL_EXTENDED	1
+#define CFI_CMDSET_AMD_STANDARD		2
+#define CFI_CMDSET_INTEL_STANDARD	3
+#define CFI_CMDSET_AMD_EXTENDED		4
+#define CFI_CMDSET_MITSU_STANDARD	256
+#define CFI_CMDSET_MITSU_EXTENDED	257
+#define CFI_CMDSET_SST			258
+
 /* convert between bit value and numeric value */
 #define CFI_FLASH_SHIFT_WIDTH	3
 /* Prototypes */

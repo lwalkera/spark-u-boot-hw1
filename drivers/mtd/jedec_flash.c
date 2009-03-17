@@ -27,7 +27,7 @@
  */
 
 /* The DEBUG define must be before common to enable debugging */
-/*#define DEBUG*/
+/* #define DEBUG */
 
 #include <common.h>
 #include <asm/processor.h>
@@ -216,6 +216,24 @@ static const struct amd_flash_info jedec_table[] = {
 		}
 	},
 #endif
+	{
+		.mfr_id		= MANUFACTURER_AMD,
+		.dev_id		= AM29LV800BB,
+		.name		= "S29AL008D",
+		.uaddr		= {
+			[0] = MTD_UADDR_0x0555_0x02AA, /* 8x  */
+			[1] = MTD_UADDR_0x0555_0x02AA, /* 16x */
+		},
+		.DevSize	= SIZE_1MiB,
+		.CmdSet		= CFI_CMDSET_AMD_LEGACY,
+		.NumEraseRegions = 4,
+		.regions	= {
+			ERASEINFO(0x4000,1),
+			ERASEINFO(0x2000,2),
+			ERASEINFO(0x8000,1),
+			ERASEINFO(0x10000,15)
+		}
+	}
 };
 
 static inline void fill_info(flash_info_t *info, const struct amd_flash_info *jedec_entry, ulong base)

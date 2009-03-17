@@ -25,6 +25,6 @@
 void __div0 (void)
 {
 	extern void hang (void);
-
+	puts("divide by zero\n");
 	hang();
 }

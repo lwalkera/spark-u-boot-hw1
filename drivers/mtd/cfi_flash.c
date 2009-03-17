@@ -32,7 +32,7 @@
  */
 
 /* The DEBUG define must be before common to enable debugging */
-/* #define DEBUG	*/
+/* #define DEBUG */
 
 #include <common.h>
 #include <asm/processor.h>
@@ -128,14 +128,6 @@
 #define FLASH_OFFSET_USER_PROTECTION	0x85
 #define FLASH_OFFSET_INTEL_PROTECTION	0x81
 
-#define CFI_CMDSET_NONE			0
-#define CFI_CMDSET_INTEL_EXTENDED	1
-#define CFI_CMDSET_AMD_STANDARD		2
-#define CFI_CMDSET_INTEL_STANDARD	3
-#define CFI_CMDSET_AMD_EXTENDED		4
-#define CFI_CMDSET_MITSU_STANDARD	256
-#define CFI_CMDSET_MITSU_EXTENDED	257
-#define CFI_CMDSET_SST			258
 
 #ifdef CFG_FLASH_CFI_AMD_RESET /* needed for STM_ID_29W320DB on UC100 */
 # undef  FLASH_CMD_RESET
@@ -280,6 +272,7 @@ flash_map (flash_info_t * info, flash_sect_t sect, uint offset)
 {
 	unsigned int byte_offset = offset * info->portwidth;
 
+	//debug("flash_map sect:0x%x offset:0x%x\n", sect, offset);
 	return map_physmem(info->start[sect] + byte_offset,
 			flash_sector_size(info, sect) - byte_offset,
 			MAP_NOCACHE);
@@ -413,6 +406,25 @@ static inline uchar flash_read_uchar (flash_info_t * info, uint offset)
 	retval = flash_read8(cp);
 #else
 	retval = flash_read8(cp + info->portwidth - 1);
+#endif
+	flash_unmap (info, 0, offset, cp);
+	return retval;
+}
+
+/*-----------------------------------------------------------------------
+ * read a character at a port width address
+ */
+static inline ushort flash_read_ushort (flash_info_t * info, uint offset)
+{
+	ushort *cp;
+	ushort retval;
+
+	cp = flash_map (info, 0, offset);
+#if defined(__LITTLE_ENDIAN) || defined(CFG_WRITE_SWAPPED_DATA)
+	retval = flash_read16(cp);
+#else
+#error "implement flash_read_ushort for big endian arch"
+	//retval = flash_read16(cp + info->portwidth - 1);
 #endif
 	flash_unmap (info, 0, offset, cp);
 	return retval;
@@ -1333,6 +1345,8 @@ int write_buff (flash_info_t * info, uchar * src, ulong addr, ulong cnt)
 #ifdef CFG_FLASH_USE_BUFFER_WRITE
 	int buffered_size;
 #endif
+	debug("\nwrite_buff() src:0x%x addr:0x%x cnt:0x%x\n", src, addr, cnt);
+
 	/* get lower aligned address */
 	wp = (addr & ~(info->portwidth - 1));
 
@@ -1360,55 +1374,53 @@ int write_buff (flash_info_t * info, uchar * src, ulong addr, ulong cnt)
 
 	/* handle the aligned part */
 #ifdef CFG_FLASH_USE_BUFFER_WRITE
-	putc('\n');
-	buffered_size = (info->portwidth / info->chipwidth);
-	buffered_size *= info->buffer_size;
-	while (cnt >= info->portwidth) {
-		/* prohibit buffer write when buffer_size is 1 */
-		if (info->buffer_size == 1) {
+	if(info->buffer_size) {
+		buffered_size = (info->portwidth / info->chipwidth);
+		buffered_size *= info->buffer_size;
+		while (cnt >= info->portwidth) {
+			/* prohibit buffer write when buffer_size is 1 */
+			if (info->buffer_size == 1) {
+				cword.l = 0;
+				for (i = 0; i < info->portwidth; i++)
+					flash_add_byte (info, &cword, *src++);
+				if ((rc = flash_write_cfiword (info, wp, cword)) != 0)
+					return rc;
+				wp += info->portwidth;
+				cnt -= info->portwidth;
+				continue;
+			}
+			/* write buffer until next buffered_size aligned boundary */
+			debug("wp:%x buffered_size:%x\n", wp, buffered_size);
+			i = buffered_size - (wp % buffered_size);
+			if (i > cnt)
+				i = cnt;
+			if ((rc = flash_write_cfibuffer (info, wp, src, i)) != ERR_OK)
+				return rc;
+			i -= i & (info->portwidth - 1);
+			wp += i;
+			src += i;
+			cnt -= i;
+			index++;
+			if(0 == index%0x800)
+			{
+				putc ('.');
+			}
+		}
+	} else
+#endif /* CFG_FLASH_USE_BUFFER_WRITE */
+		while (cnt >= info->portwidth) {
 			cword.l = 0;
-			for (i = 0; i < info->portwidth; i++)
+			for (i = 0; i < info->portwidth; i++) {
 				flash_add_byte (info, &cword, *src++);
+			}
 			if ((rc = flash_write_cfiword (info, wp, cword)) != 0)
 				return rc;
 			wp += info->portwidth;
 			cnt -= info->portwidth;
-			continue;
+			index++;
+			if(0 == index%0x800)
+				putc ('.');
 		}
-
-		/* write buffer until next buffered_size aligned boundary */
-		i = buffered_size - (wp % buffered_size);
-		if (i > cnt)
-			i = cnt;
-		if ((rc = flash_write_cfibuffer (info, wp, src, i)) != ERR_OK)
-			return rc;
-		i -= i & (info->portwidth - 1);
-		wp += i;
-		src += i;
-		cnt -= i;
-		index++;
-		if(0 == index%0x800)
-		{
-			putc ('.');
-		}
-	}
-#else
-	while (cnt >= info->portwidth) {
-		cword.l = 0;
-		for (i = 0; i < info->portwidth; i++) {
-			flash_add_byte (info, &cword, *src++);
-		}
-		if ((rc = flash_write_cfiword (info, wp, cword)) != 0)
-			return rc;
-		wp += info->portwidth;
-		cnt -= info->portwidth;
-		index++;
-		if(0 == index%0x800)
-		{
-			putc ('.');
-		}
-	}
-#endif /* CFG_FLASH_USE_BUFFER_WRITE */
 	if (cnt == 0) {
 		return (0);
 	}
@@ -1555,14 +1567,21 @@ static int cmdset_intel_init(flash_info_t *info, struct cfi_qry *qry)
 
 static void cmdset_amd_read_jedec_ids(flash_info_t *info)
 {
+	debug("cmdset_amd_read_jedec_ids()\n");
 	flash_write_cmd(info, 0, 0, AMD_CMD_RESET);
 	flash_unlock_seq(info, 0);
 	flash_write_cmd(info, 0, info->addr_unlock1, FLASH_CMD_READ_ID);
 	udelay(1000); /* some flash are slow to respond */
 	info->manufacturer_id = flash_read_uchar (info,
 					FLASH_OFFSET_MANUFACTURER_ID);
-	info->device_id = flash_read_uchar (info,
+	
+	if(info->portwidth == FLASH_CFI_16BIT)
+		info->device_id = flash_read_ushort (info,
 					FLASH_OFFSET_DEVICE_ID);
+	else
+		info->device_id = flash_read_uchar (info,
+					FLASH_OFFSET_DEVICE_ID);
+
 	if (info->device_id == 0x7E) {
 		/* AMD 3-byte (expanded) device ids */
 		info->device_id2 = flash_read_uchar (info,
@@ -1614,6 +1633,8 @@ static int flash_detect_legacy(ulong base, int banknum)
 {
 	flash_info_t *info = &flash_info[banknum];
 
+	debug("flash_detect_legacy()\n");
+
 	if (board_flash_get_legacy(base, banknum, info)) {
 		/* board code may have filled info completely. If not, we
 		   use JEDEC ID probing. */
@@ -1636,12 +1657,13 @@ static int flash_detect_legacy(ulong base, int banknum)
 					info->addr_unlock2 = 0x2AAA;
 				}
 				flash_read_jedec_ids(info);
-				debug("JEDEC PROBE: ID %x %x %x\n",
+				debug("JEDEC PROBE: manf_id:0x%x dev_id1:0x%x dev_id2:0x%x\n",
 						info->manufacturer_id,
 						info->device_id,
 						info->device_id2);
 				if (jedec_flash_match(info, base))
 					break;
+				info->vendor = CFI_CMDSET_NONE;
 			}
 		}
 
@@ -1655,10 +1677,15 @@ static int flash_detect_legacy(ulong base, int banknum)
 		case CFI_CMDSET_AMD_LEGACY:
 			info->cmd_reset = AMD_CMD_RESET;
 			break;
+		default:
+			debug("use CFI\n");
+			return 0; /* non found, so use CFI */
 		}
 		info->flash_id = FLASH_MAN_CFI;
+		debug("don't use CFI\n");
 		return 1;
 	}
+	debug("use CFI\n");
 	return 0; /* use CFI */
 }
 #else
@@ -1742,7 +1769,7 @@ static int __flash_detect_cfi (flash_info_t * info, struct cfi_qry *qry)
 
 static int flash_detect_cfi (flash_info_t * info, struct cfi_qry *qry)
 {
-	debug ("flash detect cfi\n");
+	debug ("flash_detect_cfi\n");
 
 	for (info->portwidth = CFG_FLASH_CFI_WIDTH;
 	     info->portwidth <= FLASH_CFI_64BIT; info->portwidth <<= 1) {
@@ -1815,6 +1842,8 @@ ulong flash_get_size (ulong base, int banknum)
 	int erase_region_size;
 	int erase_region_count;
 	struct cfi_qry qry;
+
+	debug("flash_get_size()\n");
 
 	info->ext_addr = 0;
 	info->cfi_version = 0;
@@ -1969,10 +1998,11 @@ unsigned long flash_init (void)
 {
 	unsigned long size = 0;
 	int i;
-
+	
 #ifdef CFG_FLASH_PROTECTION
 	char *s = getenv("unlock");
 #endif
+	debug("flash_init()\n");
 
 	/* Init: no FLASHes known */
 	for (i = 0; i < CFG_MAX_FLASH_BANKS; ++i) {
